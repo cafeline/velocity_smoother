@@ -45,6 +45,7 @@ private:
 
   double time_constant_;
   double command_timeout_;
+  double min_linear_speed_;
   double max_linear_speed_;
   double max_angular_speed_;
   double publish_frequency_;
@@ -60,4 +61,3 @@ private:
 };
 
 }  // namespace velocity_smoother
-

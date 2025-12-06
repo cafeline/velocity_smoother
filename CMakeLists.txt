@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rcl_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
@@ -18,6 +19,7 @@ target_include_directories(velocity_smoother_core PUBLIC
   $<INSTALL_INTERFACE:include>)
 ament_target_dependencies(velocity_smoother_core
   rclcpp
+  rcl_interfaces
   geometry_msgs
   visualization_msgs)
 target_compile_features(velocity_smoother_core PUBLIC c_std_99 cxx_std_17)
@@ -53,6 +55,7 @@ if(BUILD_TESTING)
     velocity_smoother_core)
   ament_target_dependencies(test_velocity_smoother_node
     rclcpp
+    rcl_interfaces
     geometry_msgs
     visualization_msgs)
 endif()

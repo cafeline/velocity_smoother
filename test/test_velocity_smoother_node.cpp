@@ -58,6 +58,7 @@ protected:
     options.append_parameter_override("time_constant", 0.0);
     options.append_parameter_override("command_timeout", 0.5);
     options.append_parameter_override("publish_frequency", 20.0);
+    options.append_parameter_override("min_linear_speed", 0.0);
     options.append_parameter_override("max_linear_speed", 2.0);
     options.append_parameter_override("max_angular_speed", 2.0);
     if (configure) {
@@ -154,6 +155,45 @@ TEST_F(VelocitySmootherNodeTest, PublishesMarkerWithoutInput)
   ASSERT_TRUE(spin_until([this]() { return received_marker_count_ > 0; }, 500ms));
   EXPECT_EQ(last_marker_.type, visualization_msgs::msg::Marker::ARROW);
   EXPECT_EQ(last_marker_.header.frame_id, "base_link");
+}
+
+TEST_F(VelocitySmootherNodeTest, AppliesMinimumLinearSpeedToNonZeroCommands)
+{
+  create_node([](rclcpp::NodeOptions & options) {
+    options.append_parameter_override("time_constant", 0.0);
+    options.append_parameter_override("min_linear_speed", 0.3);
+    options.append_parameter_override("max_linear_speed", 0.5);
+  });
+
+  geometry_msgs::msg::Twist cmd;
+  cmd.linear.x = 0.1;
+  pub_->publish(cmd);
+
+  ASSERT_TRUE(spin_until([this]() { return received_cmd_count_ > 0; }, 500ms));
+  EXPECT_NEAR(last_cmd_.linear.x, 0.3, 1e-3);
+
+  geometry_msgs::msg::Twist stop;
+  pub_->publish(stop);
+  ASSERT_TRUE(spin_until([this]() { return received_cmd_count_ > 1; }, 500ms));
+  EXPECT_NEAR(last_cmd_.linear.x, 0.0, 1e-3);
+}
+
+TEST_F(VelocitySmootherNodeTest, UpdatesMinSpeedDynamically)
+{
+  create_node([](rclcpp::NodeOptions & options) {
+    options.append_parameter_override("time_constant", 0.0);
+    options.append_parameter_override("min_linear_speed", 0.1);
+    options.append_parameter_override("max_linear_speed", 0.5);
+  });
+
+  node_->set_parameters({rclcpp::Parameter("min_linear_speed", 0.4)});
+
+  geometry_msgs::msg::Twist cmd;
+  cmd.linear.x = 0.2;
+  pub_->publish(cmd);
+
+  ASSERT_TRUE(spin_until([this]() { return received_cmd_count_ > 0; }, 500ms));
+  EXPECT_NEAR(last_cmd_.linear.x, 0.4, 1e-3);
 }
 
 }  // namespace

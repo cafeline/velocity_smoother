@@ -27,6 +27,7 @@ VelocitySmootherNode::VelocitySmootherNode(const rclcpp::NodeOptions & options)
   timeout_active_(false),
   time_constant_(0.2),
   command_timeout_(0.5),
+  min_linear_speed_(0.0),
   max_linear_speed_(0.5),
   max_angular_speed_(0.4),
   publish_frequency_(20.0),
@@ -52,6 +53,7 @@ void VelocitySmootherNode::declare_parameters()
 {
   this->declare_parameter("time_constant", 0.2);
   this->declare_parameter("command_timeout", 0.5);
+  this->declare_parameter("min_linear_speed", 0.0);
   this->declare_parameter("max_linear_speed", 0.5);
   this->declare_parameter("max_angular_speed", 0.4);
   this->declare_parameter("publish_frequency", 20.0);
@@ -165,6 +167,7 @@ void VelocitySmootherNode::apply_parameter_values()
 {
   time_constant_ = this->get_parameter("time_constant").as_double();
   command_timeout_ = this->get_parameter("command_timeout").as_double();
+  min_linear_speed_ = this->get_parameter("min_linear_speed").as_double();
   max_linear_speed_ = this->get_parameter("max_linear_speed").as_double();
   max_angular_speed_ = this->get_parameter("max_angular_speed").as_double();
   publish_frequency_ = this->get_parameter("publish_frequency").as_double();
@@ -183,7 +186,7 @@ void VelocitySmootherNode::apply_parameter_values()
   }
 
   filter_.set_time_constant(time_constant_);
-  filter_.set_velocity_limits(max_linear_speed_, max_angular_speed_);
+  filter_.set_velocity_limits(min_linear_speed_, max_linear_speed_, max_angular_speed_);
 }
 
 geometry_msgs::msg::Twist VelocitySmootherNode::zero_twist() const
@@ -208,6 +211,11 @@ rcl_interfaces::msg::SetParametersResult VelocitySmootherNode::on_parameter_even
       param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
     {
       command_timeout_ = param.as_double();
+    } else if (param.get_name() == "min_linear_speed" &&
+      param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+    {
+      min_linear_speed_ = param.as_double();
+      filter_update = true;
     } else if (param.get_name() == "max_linear_speed" &&
       param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
     {
@@ -243,7 +251,7 @@ rcl_interfaces::msg::SetParametersResult VelocitySmootherNode::on_parameter_even
 
   if (filter_update) {
     filter_.set_time_constant(time_constant_);
-    filter_.set_velocity_limits(max_linear_speed_, max_angular_speed_);
+    filter_.set_velocity_limits(min_linear_speed_, max_linear_speed_, max_angular_speed_);
   }
 
   if (timer_update) {

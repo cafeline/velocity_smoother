@@ -22,7 +22,7 @@ TEST(CommandFilterTest, AppliesSmoothingAccordingToTimeConstant)
 {
   CommandFilter filter;
   filter.set_time_constant(0.2);
-  filter.set_velocity_limits(10.0, 10.0);
+  filter.set_velocity_limits(0.0, 10.0, 10.0);
 
   auto first = filter.filter(makeTwist(1.0, 0.0, 0.0), 0.0);
   EXPECT_DOUBLE_EQ(first.linear.x, 1.0);
@@ -35,7 +35,7 @@ TEST(CommandFilterTest, ZeroTimeConstantBypassesFilter)
 {
   CommandFilter filter;
   filter.set_time_constant(0.0);
-  filter.set_velocity_limits(10.0, 10.0);
+  filter.set_velocity_limits(0.0, 10.0, 10.0);
 
   auto first = filter.filter(makeTwist(1.0), 0.0);
   EXPECT_DOUBLE_EQ(first.linear.x, 1.0);
@@ -48,7 +48,7 @@ TEST(CommandFilterTest, ClampsPlanarSpeed)
 {
   CommandFilter filter;
   filter.set_time_constant(0.0);
-  filter.set_velocity_limits(1.0, 10.0);
+  filter.set_velocity_limits(0.0, 1.0, 10.0);
 
   auto result = filter.filter(makeTwist(2.0, 0.0), 0.0);
   EXPECT_NEAR(result.linear.x, 1.0, 1e-6);
@@ -56,6 +56,29 @@ TEST(CommandFilterTest, ClampsPlanarSpeed)
 
   auto diag = filter.filter(makeTwist(1.0, 1.0), 0.1);
   EXPECT_NEAR(std::hypot(diag.linear.x, diag.linear.y), 1.0, 1e-6);
+}
+
+TEST(CommandFilterTest, RaisesPlanarSpeedToMinimumWhenNonZero)
+{
+  CommandFilter filter;
+  filter.set_time_constant(0.0);
+  filter.set_velocity_limits(0.2, 1.0, 10.0);
+
+  auto result = filter.filter(makeTwist(0.1, 0.0), 0.0);
+  EXPECT_NEAR(result.linear.x, 0.2, 1e-6);
+  EXPECT_NEAR(result.linear.y, 0.0, 1e-6);
+  EXPECT_NEAR(std::hypot(result.linear.x, result.linear.y), 0.2, 1e-6);
+}
+
+TEST(CommandFilterTest, KeepsZeroTwistAtZero)
+{
+  CommandFilter filter;
+  filter.set_time_constant(0.0);
+  filter.set_velocity_limits(0.2, 1.0, 10.0);
+
+  auto result = filter.filter(makeTwist(0.0, 0.0), 0.0);
+  EXPECT_NEAR(result.linear.x, 0.0, 1e-6);
+  EXPECT_NEAR(result.linear.y, 0.0, 1e-6);
 }
 
 }  // namespace
